@@ -1,8 +1,10 @@
 package indicatorservice.service;
 
 import indicatorservice.dto.AwardIntervalDTO;
+import indicatorservice.dto.AwardIntervalResponse;
 import indicatorservice.dto.ProducerIntervalDTO;
 import indicatorservice.entity.MovieEntity;
+import indicatorservice.exception.CsvLoadException;
 import indicatorservice.repository.MovieRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
@@ -20,17 +22,26 @@ public class MovieService {
     @Autowired
     private MovieRepository movieRepository;
 
-    public AwardIntervalDTO getAwardIntervals() {
+//    public AwardIntervalDTO getAwardIntervals() {
+//        List<MovieEntity> winningMovies = fetchWinningMovies();
+//
+//        Map<String, List<MovieEntity>> moviesGroupedByProducer = groupMoviesByProducer(winningMovies);
+//
+//        List<ProducerIntervalDTO> allIntervals = calculateIntervalsForAllProducers(moviesGroupedByProducer);
+//
+//        List<ProducerIntervalDTO> minIntervals = findMinIntervals(allIntervals);
+//        List<ProducerIntervalDTO> maxIntervals = findMaxIntervals(allIntervals);
+//
+//        return new AwardIntervalDTO(minIntervals, maxIntervals);
+//    }
+
+    public AwardIntervalResponse getAwardIntervals() {
         List<MovieEntity> winningMovies = fetchWinningMovies();
-
         Map<String, List<MovieEntity>> moviesGroupedByProducer = groupMoviesByProducer(winningMovies);
-
         List<ProducerIntervalDTO> allIntervals = calculateIntervalsForAllProducers(moviesGroupedByProducer);
-
         List<ProducerIntervalDTO> minIntervals = findMinIntervals(allIntervals);
         List<ProducerIntervalDTO> maxIntervals = findMaxIntervals(allIntervals);
-
-        return new AwardIntervalDTO(minIntervals, maxIntervals);
+        return new AwardIntervalResponse(minIntervals, maxIntervals);
     }
 
     private List<MovieEntity> fetchWinningMovies() {
@@ -64,27 +75,61 @@ public class MovieService {
         return allIntervals;
     }
 
+//    private List<ProducerIntervalDTO> findMinIntervals(List<ProducerIntervalDTO> intervals) {
+//        ProducerIntervalDTO minInterval = intervals.stream()
+//                .min(Comparator.comparingInt(ProducerIntervalDTO::getInterval))
+//                .orElse(null);
+//
+//        if (minInterval != null && minInterval.getInterval() == 1) {
+//            return Collections.singletonList(minInterval);
+//        }
+//        return Collections.emptyList();
+//    }
+//
+//    private List<ProducerIntervalDTO> findMaxIntervals(List<ProducerIntervalDTO> intervals) {
+//        ProducerIntervalDTO maxInterval = intervals.stream()
+//                .max(Comparator.comparingInt(ProducerIntervalDTO::getInterval))
+//                .orElse(null);
+//
+//        if (maxInterval != null && maxInterval.getInterval() == 13) {
+//            return Collections.singletonList(maxInterval);
+//        }
+//        return Collections.emptyList();
+//    }
+
     private List<ProducerIntervalDTO> findMinIntervals(List<ProducerIntervalDTO> intervals) {
+        int minIntervalValue = intervals.stream()
+                .min(Comparator.comparingInt(ProducerIntervalDTO::getInterval))
+                .map(ProducerIntervalDTO::getInterval)
+                .orElse(Integer.MAX_VALUE);
+
         return intervals.stream()
-                .sorted(Comparator.comparingInt(ProducerIntervalDTO::getInterval))
-                .limit(1)
+                .filter(interval -> interval.getInterval() == minIntervalValue)
                 .collect(Collectors.toList());
     }
 
     private List<ProducerIntervalDTO> findMaxIntervals(List<ProducerIntervalDTO> intervals) {
+        int maxIntervalValue = intervals.stream()
+                .max(Comparator.comparingInt(ProducerIntervalDTO::getInterval))
+                .map(ProducerIntervalDTO::getInterval)
+                .orElse(Integer.MIN_VALUE);
+
         return intervals.stream()
-                .sorted((a, b) -> Integer.compare(b.getInterval(), a.getInterval()))
-                .limit(1)
+                .filter(interval -> interval.getInterval() == maxIntervalValue)
                 .collect(Collectors.toList());
     }
+
 
     public boolean loadMoviesFromCSV() {
         if (isDatabaseEmpty()) {
             List<MovieEntity> movies = readMoviesFromCSV();
             movies.forEach(movieRepository::save);
+            return true;
         }
         return false;
     }
+
+
 
     private boolean isDatabaseEmpty() {
         return movieRepository.count() == 0;
@@ -103,12 +148,12 @@ public class MovieService {
                 movies.add(movie);
             }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load movies from CSV", e);
+            throw new CsvLoadException("Failed to load movies from CSV", e);
         }
         return movies;
     }
 
-    private MovieEntity parseCSVLine(String line) {
+    public MovieEntity parseCSVLine(String line) {
         String[] columns = line.split(";");
         MovieEntity movie = new MovieEntity();
         movie.setYear(Integer.parseInt(columns[0]));

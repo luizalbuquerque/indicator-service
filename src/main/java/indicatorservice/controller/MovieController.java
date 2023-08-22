@@ -1,6 +1,6 @@
 package indicatorservice.controller;
 
-import indicatorservice.dto.AwardIntervalDTO;
+import indicatorservice.dto.AwardIntervalResponse;
 import indicatorservice.exception.DataAlreadyExistsException;
 import indicatorservice.service.MovieService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,12 +17,20 @@ public class MovieController {
     @Autowired
     private MovieService movieService;
 
+//    @Operation(summary = "Show Intervals")
+//    @GetMapping("/award-intervals")
+//    public AwardIntervalDTO getAwardIntervals() {
+//        return movieService.getAwardIntervals();
+//    }
+
     @Operation(summary = "Show Intervals")
     @GetMapping("/award-intervals")
-    public AwardIntervalDTO getAwardIntervals() {
+    public AwardIntervalResponse getAwardIntervals() {
         return movieService.getAwardIntervals();
     }
 
+
+    // Método manual é apenas uma alternativa / sugestão.
     @Operation(summary = "Load movies from CSV")
     @PostMapping("/movies/upload")
     public ResponseEntity<String> loadDataFromCSV() {
